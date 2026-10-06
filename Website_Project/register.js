@@ -1,5 +1,5 @@
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 
 /* =====================================================================
@@ -173,14 +173,21 @@ const confirmPassword = document.getElementById("confirmPassword");
 const registerBtn = document.getElementById("registerBtn");
 const errorMsg = document.getElementById("errorMsg");
 
-// --- ID rules ---------------------------------------------------------
-// IDs that start with "ADM-" (e.g. ADM-001) are Admin accounts. Everything else is a Student.
-// Change this pattern if your real Admin IDs look different.
-const ADMIN_ID_PATTERN = /^ADM-/i;
+// --- Rules ---------------------------------------------------------------
+const MAX_ID_LENGTH = 8;              // example: 24-02291
+const ID_FORMAT = /^\d{2}-\d{5}$/;     // must look like 00-00000
 const GMAIL_REGEX = /^[^\s@]+@gmail\.com$/;
 
-function getRole(id) {
-    return ADMIN_ID_PATTERN.test(id) ? "admin" : "student";
+// Admin or Student? An ID that exists in the "adminIds" collection (added by the
+// superadmin) becomes an Admin. Every other ID becomes a Student. This way nobody
+// can make themselves an admin just by typing a certain ID.
+async function getRole(id) {
+    try {
+        const snap = await getDoc(doc(db, "adminIds", id));
+        return snap.exists() ? "admin" : "student";
+    } catch (e) {
+        return "student";
+    }
 }
 
 // The old built-in accounts (admin, superadmin, ...) also count as taken IDs
@@ -195,8 +202,19 @@ function isReservedId(id) {
 
 async function isIdTaken(id) {
     if (isReservedId(id)) return true;
-    const snapshot = await getDocs(query(collection(db, "students"), where("studentNumber", "==", id)));
+    const snapshot = await getDocs(query(collection(db, "students"), where("studentNumber", "==", String(id))));
     return !snapshot.empty;
+}
+
+// Student ID box: numbers only, shaped like 00-00000 (the "-" is added for you)
+if (studentNumber) {
+    if (studentNumber.type !== "text") studentNumber.type = "text";
+    studentNumber.setAttribute("maxlength", String(MAX_ID_LENGTH));
+    studentNumber.setAttribute("autocomplete", "off");
+    studentNumber.addEventListener("input", () => {
+        const digits = studentNumber.value.replace(/\D/g, "").slice(0, 7);
+        studentNumber.value = digits.length > 2 ? digits.slice(0, 2) + "-" + digits.slice(2) : digits;
+    });
 }
 
 if (registerBtn) {
@@ -248,7 +266,7 @@ if (form) {
 
         hideError();
 
-        const studentID = studentNumber.value.trim();
+        const studentID = String(studentNumber.value).trim();
         const name = fullName.value.trim();
         const userEmail = email.value.trim().toLowerCase();
         const userPassword = password.value;
@@ -274,15 +292,15 @@ if (form) {
         }
 
         // 2. ID format
-        if (studentID.length > 32) {
+        if (studentID.length !== MAX_ID_LENGTH) {
             shake(studentNumber);
-            showError("Student ID must not exceed 32 characters.");
+            showError("ID Input max should be 8");
             return;
         }
 
-        if (!/^[A-Za-z0-9_-]+$/.test(studentID)) {
+        if (!ID_FORMAT.test(studentID)) {
             shake(studentNumber);
-            showError("Student ID can only contain letters, numbers, _ and -.");
+            showError("ID should be like this: 00-00000");
             return;
         }
 
@@ -313,6 +331,12 @@ if (form) {
             return;
         }
 
+        if (!/\d/.test(userPassword) || !/[^A-Za-z0-9\s]/.test(userPassword) || !/[A-Z]/.test(userPassword)) {
+            shake(password);
+            showError("Password should have atleast 1 number, 1 special character and 1 capital letter");
+            return;
+        }
+
         if (userPassword !== confirmPass) {
             shake(password);
             shake(confirmPassword);
@@ -331,7 +355,7 @@ if (form) {
                 return;
             }
 
-            const role = getRole(studentID);
+            const role = await getRole(studentID);
 
             // 1. Create the user in Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(
@@ -348,12 +372,12 @@ if (form) {
                 fullName: name,
                 email: userEmail,
                 role: role,                       // "student" or "admin"
-                approved: role === "student",     // admin accounts wait for approval
+                approved: true,
                 createdAt: serverTimestamp()
             });
 
             // 3. Curtain animation, then go to the login page
-            go("login.html", role === "admin" ? "Admin account created. Awaiting approval." : "Registration successful!");
+            go("login.html", role === "admin" ? "Admin account created!" : "Registration successful!");
 
         } catch (error) {
             console.error("Submission Error:", error);
