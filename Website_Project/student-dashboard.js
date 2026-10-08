@@ -28,7 +28,7 @@ const CONFIG = {
   reminders: [
     'Pay the assessed amount at the Cashier, then present the receipt to the Registrar.',
     'Processing usually takes 3–5 working days after payment is verified.',
-    'Bring a valid ID when claiming. Representatives need an authorization letter.'
+    'Bring a Student ID when claiming. Representatives need an authorization letter.'
   ]
 };
 
@@ -128,7 +128,7 @@ const state = loadState();
    UI shell: nav, breadcrumb, toast, modal
    ===================================================================== */
 const ROUTES = [
-  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'dashboard', label: 'Home' },
   { id: 'new',       label: 'New Request' },
   { id: 'requests',  label: 'My Requests' },
   { id: 'profile',   label: 'Profile' }
