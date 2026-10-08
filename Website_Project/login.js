@@ -184,6 +184,10 @@ const password = document.getElementById("password");
 const loginBtn = document.getElementById("loginBtn");
 const errorMsg = document.getElementById("errorMsg");
 
+// --- ID formats ---
+const STUDENT_ID_FORMAT = /^\d{2}-\d{5}$/;     // Student: 00-00000
+const ADMIN_ID_FORMAT   = /^\d{3}-\d{5}$/;     // Admin/Personnel: 000-00000
+
 loginBtn.addEventListener("mouseenter", () => {
     loginBtn.style.transform = "translateY(-2px)";
     loginBtn.style.boxShadow = "0 6px 14px rgba(0,0,0,0.2)";
@@ -202,11 +206,18 @@ loginBtn.addEventListener("mouseup", () => {
     loginBtn.style.transform = "translateY(-2px)";
 });
 
-// ID box: when the ID starts with a number it is shaped like 00-00000 as you type
+// ID box: when the ID starts with a number it is shaped like 00-00000 (student)
+// or 000-00000 (admin) as you type
 studentNumber.addEventListener("input", () => {
-    if (!/^[0-9-]/.test(studentNumber.value)) return;
-    const digits = studentNumber.value.replace(/\D/g, "").slice(0, 7);
-    studentNumber.value = digits.length > 2 ? digits.slice(0, 2) + "-" + digits.slice(2) : digits;
+    if (!/^[0-9-]/.test(studentNumber.value)) return;   // legacy "admin"/"superadmin" text IDs
+    const raw = studentNumber.value.replace(/[^\d-]/g, "");
+    const pos = raw.indexOf("-");
+    const digits = raw.replace(/\D/g, "").slice(0, 8);
+    let out = digits;
+    if (digits.length === 8) out = digits.slice(0, 3) + "-" + digits.slice(3);
+    else if (digits.length === 7 && pos !== 3) out = digits.slice(0, 2) + "-" + digits.slice(2);
+    else if ((pos === 2 || pos === 3) && digits.length >= pos) out = digits.slice(0, pos) + "-" + digits.slice(pos);
+    studentNumber.value = out;
 });
 
 function shake(element) {
@@ -248,15 +259,9 @@ form.addEventListener("submit", async function (event) {
     const isBuiltIn = loadAccounts().some((acc) => acc.studentId === username);
 
     if (!isBuiltIn) {
-        if (username.length !== 8) {
+        if (!STUDENT_ID_FORMAT.test(username) && !ADMIN_ID_FORMAT.test(username)) {
             shake(studentNumber);
-            showError("ID Input max should be 8");
-            return;
-        }
-
-        if (!/^\d{2}-\d{5}$/.test(username)) {
-            shake(studentNumber);
-            showError("ID should be like this: 00-00000");
+            showError("Invalid ID. Student: 00-00000. Admin/Personnel: 000-00000.");
             return;
         }
     }
@@ -316,6 +321,7 @@ form.addEventListener("submit", async function (event) {
         const userCredential = await signInWithEmailAndPassword(auth, studentDoc.email, userPassword);
         const user = userCredential.user;
 
+        // The role comes from the account saved in the database, not from the login form
         const role = studentDoc.role === "admin" ? "admin" : "student";
 
         // Admin accounts must be approved before they can log in
