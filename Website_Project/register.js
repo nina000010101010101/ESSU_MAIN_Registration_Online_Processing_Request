@@ -174,20 +174,16 @@ const registerBtn = document.getElementById("registerBtn");
 const errorMsg = document.getElementById("errorMsg");
 
 // --- Rules ---------------------------------------------------------------
-const MAX_ID_LENGTH = 8;              // example: 24-02291
-const ID_FORMAT = /^\d{2}-\d{5}$/;     // must look like 00-00000
+const MAX_ID_LENGTH = 9;                       // longest ID: 123-45678
+const STUDENT_ID_FORMAT = /^\d{2}-\d{5}$/;     // Student: 00-00000 (7 digits)
+const ADMIN_ID_FORMAT   = /^\d{3}-\d{5}$/;     // Admin/Personnel: 000-00000 (8 digits)
 const GMAIL_REGEX = /^[^\s@]+@gmail\.com$/;
 
-// Admin or Student? An ID that exists in the "adminIds" collection (added by the
-// superadmin) becomes an Admin. Every other ID becomes a Student. This way nobody
-// can make themselves an admin just by typing a certain ID.
-async function getRole(id) {
-    try {
-        const snap = await getDoc(doc(db, "adminIds", id));
-        return snap.exists() ? "admin" : "student";
-    } catch (e) {
-        return "student";
-    }
+// Role is decided by the ID format (returns null if the format is invalid)
+function getRole(id) {
+    if (STUDENT_ID_FORMAT.test(id)) return "student";
+    if (ADMIN_ID_FORMAT.test(id)) return "admin";
+    return null;
 }
 
 // The old built-in accounts (admin, superadmin, ...) also count as taken IDs
@@ -206,14 +202,21 @@ async function isIdTaken(id) {
     return !snapshot.empty;
 }
 
-// Student ID box: numbers only, shaped like 00-00000 (the "-" is added for you)
+// ID box: numbers only. Student = 00-00000, Admin/Personnel = 000-00000
+// (the "-" is added for you)
 if (studentNumber) {
     if (studentNumber.type !== "text") studentNumber.type = "text";
     studentNumber.setAttribute("maxlength", String(MAX_ID_LENGTH));
     studentNumber.setAttribute("autocomplete", "off");
     studentNumber.addEventListener("input", () => {
-        const digits = studentNumber.value.replace(/\D/g, "").slice(0, 7);
-        studentNumber.value = digits.length > 2 ? digits.slice(0, 2) + "-" + digits.slice(2) : digits;
+        const raw = studentNumber.value.replace(/[^\d-]/g, "");
+        const pos = raw.indexOf("-");                       // where the user typed the hyphen
+        const digits = raw.replace(/\D/g, "").slice(0, 8);
+        let out = digits;
+        if (digits.length === 8) out = digits.slice(0, 3) + "-" + digits.slice(3);        // 000-00000
+        else if (digits.length === 7 && pos !== 3) out = digits.slice(0, 2) + "-" + digits.slice(2); // 00-00000
+        else if ((pos === 2 || pos === 3) && digits.length >= pos) out = digits.slice(0, pos) + "-" + digits.slice(pos);
+        studentNumber.value = out;
     });
 }
 
@@ -291,16 +294,11 @@ if (form) {
             return;
         }
 
-        // 2. ID format
-        if (studentID.length !== MAX_ID_LENGTH) {
+        // 2. ID format (this also decides Student or Admin)
+        const role = getRole(studentID);
+        if (!role) {
             shake(studentNumber);
-            showError("ID Input max should be 8");
-            return;
-        }
-
-        if (!ID_FORMAT.test(studentID)) {
-            shake(studentNumber);
-            showError("ID should be like this: 00-00000");
+            showError("Invalid ID. Student: 00-00000 (e.g. 24-12345). Admin/Personnel: 000-00000 (e.g. 123-45678).");
             return;
         }
 
@@ -355,8 +353,6 @@ if (form) {
                 return;
             }
 
-            const role = await getRole(studentID);
-
             // 1. Create the user in Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(
                 auth,
@@ -367,14 +363,24 @@ if (form) {
             const user = userCredential.user;
 
             // 2. Save the extra profile fields in Firestore, under the user's UID
-            await setDoc(doc(db, "students", user.uid), {
-                studentNumber: studentID,
-                fullName: name,
-                email: userEmail,
-                role: role,                       // "student" or "admin"
-                approved: true,
-                createdAt: serverTimestamp()
-            });
+            try {
+                await setDoc(doc(db, "students", user.uid), {
+                    studentNumber: studentID,
+                    fullName: name,
+                    email: userEmail,
+                    role: role,                       // "student" or "admin"
+                    approved: true,
+                    createdAt: serverTimestamp()
+                });
+            } catch (err) {
+                await user.delete();                  // remove the half-made login account
+                if (err.code === "permission-denied") {
+                    shake(studentNumber);
+                    showError("This Admin ID is not approved. Please contact the registrar.");
+                    return;
+                }
+                throw err;
+            }
 
             // 3. Curtain animation, then go to the login page
             go("login.html", role === "admin" ? "Admin account created!" : "Registration successful!");
