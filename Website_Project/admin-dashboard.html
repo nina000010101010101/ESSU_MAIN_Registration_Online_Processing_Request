@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ESSU Registrar — Admin Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest-950:#0b1f16;
+    --forest-900:#0f2a1d;
+    --forest-800:#16382a;
+    --forest-700:#1d4a37;
+    --forest-600:#25604a;
+    --forest-100:#e3ece6;
+    --gold-600:#c3941f;
+    --gold-500:#d9a92f;
+    --gold-400:#e9c46a;
+    --gold-300:#f1d488;
+    --gold-100:#faf1d9;
+    --paper:#ffffff;
+    --surface:#ffffff;
+    --surface-gold:#f6f7f6;
+    --ink:#182420;
+    --ink-soft:#5b675f;
+    --line:#e5e1d3;
+    --line-strong:#d4cfba;
+    --submitted-bg:#fbeecb; --submitted-fg:#8a5a10;
+    --processing-bg:#dfe8f7; --processing-fg:#2b4f8c;
+    --released-bg:#dcefe0; --released-fg:#276a3e;
+    --cancelled-bg:#f3e1e1; --cancelled-fg:#9c3b3b;
+    --radius-s:6px; --radius-m:10px; --radius-l:16px;
+    --shadow-1:0 1px 2px rgba(13,43,33,.06);
+    --shadow-2:0 8px 24px rgba(13,43,33,.10);
+    color-scheme: light;
+    box-sizing:border-box;
+    padding-top: env(safe-area-inset-top,0px);
+    padding-bottom: env(safe-area-inset-bottom,0px);
+  }
+  :root:not([data-theme="light"]) {}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1712; --surface:#0f231b; --surface-gold:#152019; --ink:#eef3ef; --ink-soft:#9fb0a7;
+      --line:#1e3329; --line-strong:#294737; --forest-100:#12271e;
+      --submitted-bg:#3a2c10; --submitted-fg:#f1c877;
+      --processing-bg:#132a44; --processing-fg:#9cc0f0;
+      --released-bg:#12332090; --released-fg:#8fd8a4;
+      --cancelled-bg:#3a1c1c; --cancelled-fg:#f0a3a3;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1712; --surface:#0f231b; --surface-gold:#152019; --ink:#eef3ef; --ink-soft:#9fb0a7;
+    --line:#1e3329; --line-strong:#294737; --forest-100:#12271e;
+    --submitted-bg:#3a2c10; --submitted-fg:#f1c877;
+    --processing-bg:#132a44; --processing-fg:#9cc0f0;
+    --released-bg:#12332090; --released-fg:#8fd8a4;
+    --cancelled-bg:#3a1c1c; --cancelled-fg:#f0a3a3;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Public Sans", -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; margin:0; }
+  button{font-family:inherit;}
+
+  /* ---- Header (masthead) ---- */
+  header.top{
+    background: linear-gradient(160deg, var(--forest-950), var(--forest-900));
+    color:#f4f1e6;
+    padding: env(safe-area-inset-top,0px) 0 0 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .top-inner{
+    max-width:1360px; margin:0 auto; padding:22px 28px;
+    display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+  }
+  .crest{
+    width:76px; height:76px; border-radius:50%; flex:none;
+    background:#ffffff;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 0 0 2px var(--gold-400);
+  }
+  .crest svg{ width:40px; height:40px; }
+  .masthead-divider{ align-self:stretch; width:1px; min-height:64px; background: rgba(233,196,106,.5); flex:none; }
+  .brand{ min-width:0; }
+  .brand small{ display:block; color:rgba(244,241,230,.85); font-size:13.5px; letter-spacing:.01em; }
+  .brand-rule{ border:none; height:1px; margin:7px 0; max-width:520px; background: rgba(233,196,106,.5); }
+  .brand strong{ display:block; font-family:"Fraunces",serif; font-size:2.1rem; font-weight:700; line-height:1.15; }
+  .brand span.sub{ display:block; font-size:14px; color:var(--gold-300); margin-top:3px; }
+  .brand span.tagline{ display:block; font-size:13px; color:rgba(244,241,230,.8); margin-top:1px; }
+
+  /* ---- Auxiliary nav bar (distinct background from masthead) ---- */
+  .aux-nav{
+    background: var(--forest-800);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    position:sticky; top:0; z-index:40;
+  }
+  .nav-row{
+    max-width:1360px; margin:0 auto; padding:12px 28px;
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    min-height:56px;
+  }
+  .top-nav{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+  .nav-tab{
+    background:transparent; border:none; color:#f4f1e6; text-decoration:none;
+    font-size:14px; font-weight:600; padding:9px 16px; border-radius:999px; cursor:pointer;
+  }
+  .nav-tab:hover{ background: rgba(255,255,255,.08); }
+  .nav-tab.active{ background: rgba(255,255,255,.14); color: var(--gold-400); }
+  .top-right{ margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .search-box{
+    display:flex; align-items:center; gap:8px;
+    background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+    border-radius:999px; padding:8px 14px; min-width:220px;
+  }
+  .search-box input{
+    background:transparent; border:none; outline:none; color:#fff; font-size:14px; width:100%;
+  }
+  .search-box input::placeholder{ color:#cfe0d5; }
+  .role-chip{
+    background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+    padding:8px 16px; border-radius:999px; font-size:13.5px; font-weight:600; color:#f4f1e6;
+    max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .btn-logout{
+    background:transparent; border:1px solid rgba(255,255,255,.35); color:#f4f1e6;
+    padding:8px 18px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer;
+    transition:.15s background;
+  }
+  .btn-logout:hover{ background: rgba(255,255,255,.12); }
+
+  /* ---- Shell layout ---- */
+  .shell{ max-width:1360px; margin:0 auto; display:flex; gap:26px; padding:26px 28px 60px; align-items:flex-start; }
+
+  /* ---- Sidebar (document folders) ---- */
+  .sidebar{
+    width:270px; flex:none; background:var(--surface-gold); border:1px solid var(--line);
+    border-radius: var(--radius-l); padding:10px; position:sticky; top:22px; box-shadow: var(--shadow-1);
+  }
+  .sidebar h2{ font-size:12.5px; text-transform:none; letter-spacing:.01em; color:var(--ink-soft);
+    font-family:"Public Sans",sans-serif; font-weight:600; padding:10px 12px 6px; }
+  .folder-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .folder-btn{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:transparent; border:none; text-align:left; padding:10px 12px; border-radius:var(--radius-m);
+    cursor:pointer; color:var(--ink); font-size:14px; font-weight:500;
+  }
+  .folder-btn:hover{ background: var(--forest-100); }
+  .folder-btn.active{ background: var(--forest-900); color:#f4f1e6; }
+  .folder-btn.active .count{ background: var(--gold-500); color:#2a1c04; }
+  .folder-btn .count{
+    background: var(--forest-100); color:var(--ink-soft); font-size:12px; font-weight:700;
+    padding:2px 9px; border-radius:999px; flex:none;
+  }
+  .sidebar hr{ border:none; border-top:1px solid var(--line); margin:8px 6px; }
+
+  /* ---- Main panel ---- */
+  main{ flex:1; min-width:0; }
+  .panel-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .panel-head h1{ font-size:1.9rem; color:var(--forest-900); }
+  :root[data-theme="dark"] .panel-head h1, @media (prefers-color-scheme: dark){ .panel-head h1{ color:#eef3ef; } }
+  .panel-head p{ margin:4px 0 0; color:var(--ink-soft); font-size:14.5px; }
+
+  .stat-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px; }
+  .stat-card{ background:var(--surface-gold); border:1px solid var(--line); border-radius:var(--radius-m); padding:14px 16px; box-shadow:var(--shadow-1); }
+  .stat-card .num{ font-family:"Fraunces",serif; font-size:1.7rem; font-weight:600; color:var(--forest-900); }
+  :root[data-theme="dark"] .stat-card .num, @media (prefers-color-scheme: dark){ .stat-card .num{ color:#f4f1e6; } }
+  .stat-card .lbl{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .stat-card.gold .num{ color:var(--gold-600); }
+
+  .toolbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .pill{
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+    padding:7px 15px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .pill.active{ background:var(--forest-900); border-color:var(--forest-900); color:#f4f1e6; }
+  .toolbar .search-local{ margin-left:auto; }
+  .search-local input{
+    border:1px solid var(--line-strong); border-radius:999px; padding:8px 15px; font-size:13.5px;
+    min-width:230px; background:var(--surface); color:var(--ink); outline:none;
+  }
+  .search-local input:focus{ border-color: var(--gold-500); }
+
+  .table-card{ background:var(--surface-gold); border:1px solid var(--line); border-radius:var(--radius-l); box-shadow:var(--shadow-1); overflow:hidden; }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  thead th{
+    text-align:left; padding:13px 18px; font-size:12.5px; color:var(--ink-soft); font-weight:600;
+    border-bottom:1px solid var(--line); background: var(--forest-100);
+  }
+  tbody td{ padding:13px 18px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background: rgba(217,166,63,.06); }
+  .req-no{ font-weight:700; color:var(--forest-900); }
+  :root[data-theme="dark"] .req-no, @media (prefers-color-scheme: dark){ .req-no{ color:#f1e6c8; } }
+  .student-name{ font-weight:600; }
+  .student-meta{ font-size:12.5px; color:var(--ink-soft); margin-top:1px; }
+  .badge{ display:inline-block; padding:5px 12px; border-radius:999px; font-size:12.5px; font-weight:700; }
+  .badge.Submitted{ background:var(--submitted-bg); color:var(--submitted-fg); }
+  .badge.Processing{ background:var(--processing-bg); color:var(--processing-fg); }
+  .badge.Released{ background:var(--released-bg); color:var(--released-fg); }
+  .badge.Cancelled{ background:var(--cancelled-bg); color:var(--cancelled-fg); }
+  .view-btn{
+    border:1px solid var(--line-strong); background:transparent; color:var(--ink);
+    padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .view-btn:hover{ border-color:var(--gold-500); color:var(--gold-600); }
+  .empty{ padding:50px 20px; text-align:center; color:var(--ink-soft); }
+  .empty strong{ display:block; color:var(--ink); font-family:"Fraunces",serif; font-size:1.2rem; margin-bottom:4px; }
+
+  /* ---- Profile page ---- */
+  .profile-shell{ max-width:760px; margin:0 auto; padding:36px 28px 60px; }
+  .profile-shell h1{ font-size:1.9rem; color:var(--forest-900); }
+  @media (prefers-color-scheme: dark){ .profile-shell h1{ color:#eef3ef; } }
+  :root[data-theme="dark"] .profile-shell h1{ color:#eef3ef; }
+  .profile-shell > p{ margin:6px 0 24px; color:var(--ink-soft); font-size:14.5px; }
+  .profile-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-l); box-shadow:var(--shadow-1); padding:32px; }
+  .field{ margin-bottom:20px; }
+  .field label{ display:block; font-size:14px; font-weight:600; margin-bottom:8px; }
+  .field input{
+    width:100%; padding:12px 14px; border:1px solid var(--line-strong); border-radius:var(--radius-s);
+    background:var(--surface); color:var(--ink); font-size:14.5px; outline:none;
+  }
+  .field input:focus{ border-color: var(--gold-500); }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .privacy-note{ font-size:13px; color:var(--ink-soft); margin:6px 0 22px; }
+  .save-row{ display:flex; align-items:center; gap:14px; }
+  .btn-save{
+    background:var(--gold-500); border:none; color:#2a1c04; font-weight:700;
+    padding:12px 24px; border-radius:999px; cursor:pointer; font-size:14.5px;
+  }
+  .btn-save:hover{ background:var(--gold-600); }
+  .saved-note{ font-size:13.5px; color:var(--released-fg); font-weight:600; opacity:0; transition:opacity .2s; }
+  .saved-note.show{ opacity:1; }
+  @media (max-width:600px){ .field-row{ grid-template-columns:1fr; } .profile-card{ padding:22px; } }
+
+  /* ---- Modal ---- */
+  .overlay{ position:fixed; inset:0; background:rgba(10,20,16,.45); display:none; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .overlay.open{ display:flex; }
+  .modal{ background:var(--surface); border-radius:var(--radius-l); width:100%; max-width:480px; box-shadow:var(--shadow-2); overflow:hidden; }
+  .modal-head{ background:var(--forest-900); color:#f4f1e6; padding:18px 22px; display:flex; justify-content:space-between; align-items:center; }
+  .modal-head h3{ font-size:1.1rem; }
+  .modal-close{ background:transparent; border:none; color:#f4f1e6; font-size:20px; cursor:pointer; line-height:1; }
+  .modal-body{ padding:20px 22px; display:flex; flex-direction:column; gap:12px; }
+  .mrow{ display:flex; justify-content:space-between; gap:12px; font-size:14px; border-bottom:1px dashed var(--line); padding-bottom:10px; }
+  .mrow .k{ color:var(--ink-soft); }
+  .mrow .v{ font-weight:600; text-align:right; }
+  .status-select{ margin-top:6px; }
+  .status-select label{ font-size:12.5px; color:var(--ink-soft); display:block; margin-bottom:6px; }
+  .status-select select{
+    width:100%; padding:9px 12px; border-radius:var(--radius-s); border:1px solid var(--line-strong);
+    background:var(--surface); color:var(--ink); font-size:14px;
+  }
+  .modal-foot{ padding:16px 22px 20px; display:flex; justify-content:flex-end; gap:10px; }
+  .btn-primary{ background:var(--gold-500); border:none; color:#2a1c04; font-weight:700; padding:10px 18px; border-radius:999px; cursor:pointer; }
+  .btn-primary:hover{ background:var(--gold-600); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line-strong); color:var(--ink); font-weight:600; padding:10px 18px; border-radius:999px; cursor:pointer; }
+
+  @media (max-width: 860px){
+    .shell{ flex-direction:column; padding:18px; }
+    .sidebar{ width:100%; position:static; }
+    .folder-list{ flex-direction:row; flex-wrap:wrap; }
+    .folder-btn{ width:auto; }
+    .stat-row{ grid-template-columns:repeat(2,1fr); }
+    table, thead, tbody, th, td, tr{ display:block; }
+    thead{ display:none; }
+    tbody tr{ padding:14px 16px; border-bottom:1px solid var(--line); }
+    tbody td{ border:none; padding:4px 0; }
+    tbody td[data-label]::before{ content: attr(data-label); display:block; font-size:11.5px; color:var(--ink-soft); font-weight:600; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="crest" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 3 1 8l11 5 9-4.09V17h2V8L12 3Z" fill="#0d2b21"/>
+        <path d="M5 10.6V15c0 1.7 3.1 4 7 4s7-2.3 7-4v-4.4l-7 3.18-7-3.18Z" fill="#0d2b21"/>
+      </svg>
+    </div>
+    <div class="masthead-divider" aria-hidden="true"></div>
+    <div class="brand">
+      <small>Republic of the Philippines</small>
+      <hr class="brand-rule">
+      <strong>Eastern Samar State University</strong>
+      <span class="sub">Main Campus, Borongan City, Eastern Samar</span>
+      <span class="tagline">Excellence &bull; Accountability &bull; Service</span>
+    </div>
+  </div>
+</header>
+
+<nav class="aux-nav" aria-label="Registrar admin console">
+  <div class="nav-row">
+    <div class="top-nav">
+      <button class="nav-tab active" id="tabDashboard" data-view="dashboard">Home</button>
+      <button class="nav-tab" id="tabProfile" data-view="profile">Profile</button>
+    </div>
+    <div class="top-right">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f4f1e6" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="globalSearch" placeholder="Search by student ID or request no.">
+      </div>
+      <span class="role-chip" id="adminNameChip" title="Signed in as">Admin</span>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+</nav>
+
+<div class="shell" id="dashboardView">
+  <aside class="sidebar">
+    <h2>Document types</h2>
+    <ul class="folder-list" id="folderList"></ul>
+  </aside>
+
+  <main>
+    <div class="panel-head">
+      <div>
+        <h1 id="panelTitle">All requests</h1>
+        <p id="panelSub">Every credential request filed by students, across all document types.</p>
+      </div>
+    </div>
+
+    <div class="stat-row" id="statRow"></div>
+
+    <div class="toolbar">
+      <button class="pill active" data-status="All">All</button>
+      <button class="pill" data-status="Submitted">Submitted</button>
+      <button class="pill" data-status="Processing">Processing</button>
+      <button class="pill" data-status="Released">Released</button>
+      <button class="pill" data-status="Cancelled">Cancelled</button>
+      <div class="search-local">
+        <input id="localSearch" placeholder="Filter this list…">
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Request no.</th>
+            <th>Student</th>
+            <th>Document</th>
+            <th>Status</th>
+            <th>Filed</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyState" style="display:none;">
+        <strong>No requests match this view</strong>
+        Try a different document type, status, or search term.
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="profile-shell" id="profileView" style="display:none;">
+  <h1>Profile</h1>
+  <p>These details are printed on every request record you process.</p>
+  <div class="profile-card">
+    <form id="profileForm">
+      <div class="field">
+        <label for="pFullName">Full name</label>
+        <input id="pFullName" type="text" placeholder="Last name, First name M.I.">
+      </div>
+      <div class="field">
+        <label for="pPosition">Position</label>
+        <input id="pPosition" type="text" placeholder="e.g. Registrar Staff">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="pStaffNo">Staff No.</label>
+          <input id="pStaffNo" type="text">
+        </div>
+        <div class="field">
+          <label for="pEmail">Email</label>
+          <input id="pEmail" type="email">
+        </div>
+      </div>
+      <p class="privacy-note">Your personal information is protected under the Data Privacy Act of 2012 (RA 10173).</p>
+      <div class="save-row">
+        <button type="submit" class="btn-save">Save changes</button>
+        <span class="saved-note" id="savedNote">Changes saved.</span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="mReqNo">REQ-2026-0000</h3>
+      <button class="modal-close" id="mClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+    <div class="modal-foot">
+      <button class="btn-ghost" id="mCancel">Close</button>
+      <button class="btn-primary" id="mSave">Save status</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
